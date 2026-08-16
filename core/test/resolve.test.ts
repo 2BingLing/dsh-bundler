@@ -13,8 +13,8 @@ import {
 import type { VersionInfo, VersionSource } from "../src/index.js";
 
 const mkEntry = (over: Record<string, unknown> = {}) => ({
-  id: "owner/repo",
-  type: "skill",
+  id: "@dsh/plugin-xyz",
+  type: "bundle",
   version: "latest",
   ...over,
 });
@@ -38,7 +38,8 @@ describe("classifyVersionSpec", () => {
   it("recognizes latest", () => expect(classifyVersionSpec("latest")).toBe("latest"));
   it("defaults to latest", () => expect(classifyVersionSpec(undefined)).toBe("latest"));
   it("recognizes date anchors", () => expect(classifyVersionSpec("2026-08-15")).toBe("date"));
-  it("recognizes commit pins", () => expect(classifyVersionSpec("a".repeat(40))).toBe("commit"));
+  it("recognizes bare commit pins", () => expect(classifyVersionSpec("a".repeat(40))).toBe("commit"));
+  it("recognizes #-prefixed commit pins (git form)", () => expect(classifyVersionSpec(`#${"a".repeat(40)}`)).toBe("commit"));
   it("treats semver ranges as range", () => expect(classifyVersionSpec(">=1.2.0")).toBe("range"));
   it("treats anything else as range (lenient — intent, not contract)", () =>
     expect(classifyVersionSpec("weird")).toBe("range"));
@@ -90,9 +91,9 @@ describe("pickVersion", () => {
 });
 
 describe("resolveEntry", () => {
-  it("resolves latest through the injected source", async () => {
+  it("resolves bundle latest through the injected npm source", async () => {
     const entry = mkEntry();
-    const resolved = await resolveEntry(entry, { sources: { skill: mockSource(versions) } });
+    const resolved = await resolveEntry(entry, { sources: { bundle: mockSource(versions) } });
     expect(resolved.status).toBe("ok");
     expect(resolved.resolvedVersion).toBe("2.0.0");
     expect(resolved.publishedAt).toBe("2026-06-01T00:00:00Z");
@@ -100,43 +101,56 @@ describe("resolveEntry", () => {
 
   it("resolves a semver range through the source", async () => {
     const entry = mkEntry({ version: ">=1.0.0 <2" });
-    const resolved = await resolveEntry(entry, { sources: { skill: mockSource(versions) } });
+    const resolved = await resolveEntry(entry, { sources: { bundle: mockSource(versions) } });
     expect(resolved.resolvedVersion).toBe("1.2.0");
   });
 
   it("resolves a date anchor", async () => {
     const entry = mkEntry({ version: "2026-04-01" });
-    const resolved = await resolveEntry(entry, { sources: { skill: mockSource(versions) } });
+    const resolved = await resolveEntry(entry, { sources: { bundle: mockSource(versions) } });
     expect(resolved.resolvedVersion).toBe("1.2.0");
   });
 
-  it("commit pins short-circuit without any source", async () => {
+  it("resolves git latest through the injected GitHub source", async () => {
+    const entry = mkEntry({ id: "owner/repo", type: "git" });
+    const resolved = await resolveEntry(entry, { sources: { git: mockSource(versions) } });
+    expect(resolved.status).toBe("ok");
+    expect(resolved.resolvedVersion).toBe("2.0.0");
+  });
+
+  it("commit pins short-circuit without any source and drop the # prefix", async () => {
     const sha = "b".repeat(40);
-    const entry = mkEntry({ version: sha });
+    const entry = mkEntry({ version: `#${sha}` });
     const resolved = await resolveEntry(entry, {});
     expect(resolved.status).toBe("ok");
     expect(resolved.resolvedVersion).toBe(sha);
   });
 
+  it("skill entries resolve without any network lookup", async () => {
+    const entry = mkEntry({ id: "translation-workflow", type: "skill" });
+    const resolved = await resolveEntry(entry, {});
+    expect(resolved.status).toBe("ok");
+    expect(resolved.resolvedVersion).toBe("latest");
+  });
+
   it("unknown entry types skip with a law-2 reason, without touching sources", async () => {
     const entry = mkEntry({ type: "hyperdrive" });
-    const source = mockSource(versions);
-    const spy = { ...source, listVersions: async () => { throw new Error("must not be called"); } };
-    const resolved = await resolveEntry(entry, { sources: { skill: spy } });
+    const spy = { listVersions: async () => { throw new Error("must not be called"); } };
+    const resolved = await resolveEntry(entry, { sources: { bundle: spy } });
     expect(resolved.status).toBe("skip");
     expect(resolved.reason).toContain("law 2");
   });
 
   it("throws when nothing satisfies the spec (orchestrator marks it failed)", async () => {
     const entry = mkEntry({ version: "^3.0.0" });
-    await expect(resolveEntry(entry, { sources: { skill: mockSource(versions) } })).rejects.toThrow(
+    await expect(resolveEntry(entry, { sources: { bundle: mockSource(versions) } })).rejects.toThrow(
       "no version satisfies",
     );
   });
 
   it("propagates source failures (orchestrator marks it failed)", async () => {
     const entry = mkEntry();
-    await expect(resolveEntry(entry, { sources: { skill: mockSource([], true) } })).rejects.toThrow(
+    await expect(resolveEntry(entry, { sources: { bundle: mockSource([], true) } })).rejects.toThrow(
       "source exploded",
     );
   });

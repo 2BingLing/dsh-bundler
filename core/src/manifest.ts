@@ -8,6 +8,7 @@
 
 import {
   KIND,
+  PLUGIN_TYPES,
   SCHEMA_VERSION,
   type DshPack,
   type ManifestError,
@@ -18,8 +19,8 @@ import {
 
 /** Date anchor: YYYY-MM-DD. */
 const DATE_ANCHOR_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Commit pin: 40-hex SHA. */
-const COMMIT_RE = /^[0-9a-f]{40}$/i;
+/** Commit pin: optional "#" prefix (git form) + 40-hex SHA. */
+const COMMIT_RE = /^#?[0-9a-f]{40}$/i;
 /** Loose semver/range shapes: 1.2.3, >=1.2.0, ^1.2, ~1.2, 1.x, * ... */
 const SEMVER_RANGE_RE = /^[0-9*]+(?:\.[0-9x*]+){0,2}(?:-[0-9A-Za-z.-]+)?(?:[+][0-9A-Za-z.-]+)?$/;
 const RANGE_OP_RE = /^[<>=~^]+/;
@@ -130,7 +131,7 @@ export function validateManifest(data: unknown): ManifestResult {
       // Law 2: unknown entry types are preserved + warned, never fatal.
       if (typeof e["type"] !== "string" || e["type"].trim() === "") {
         warnings.push({ code: "unknown-entry-type", message: "entry.type missing or invalid; entry will be skipped at install time", path: `${path}.type` });
-      } else if (!["skill", "cordis", "bundle"].includes(e["type"])) {
+      } else if (!PLUGIN_TYPES.includes(e["type"] as (typeof PLUGIN_TYPES)[number])) {
         warnings.push({ code: "unknown-entry-type", message: `unknown entry type "${e["type"]}"; entry will be skipped at install time`, path: `${path}.type` });
       }
 

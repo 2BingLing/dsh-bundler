@@ -14,24 +14,28 @@ export const SCHEMA_VERSION = 1;
 /** File-kind marker that identifies a dsh.pack.json document. */
 export const KIND = "dsh-pack";
 
-/** Entry types recognized by SPEC v0.1. Unknown types are warn + skip + report (law 2). */
-export const PLUGIN_TYPES = ["skill", "cordis", "bundle"] as const;
+/**
+ * Entry types recognized by SPEC v0.1 (SPEC §4.2, aligned with the official
+ * ecosystem 2026-08-16): bundle (npm package) | git (owner/repo) | skill
+ * (SKILL.md file). Unknown types are warn + skip + report (law 2).
+ */
+export const PLUGIN_TYPES = ["bundle", "git", "skill"] as const;
 
 export type PluginType = (typeof PLUGIN_TYPES)[number];
 
 /**
  * Version specifier (SPEC §4.3): "latest" | semver range | YYYY-MM-DD date
- * anchor | 40-hex commit SHA. A pack expresses intent, not contract —
- * resolution happens at install time.
+ * anchor | "#<40-hex>" commit pin (git) | exact version. A pack expresses
+ * intent, not contract — resolution happens at install time.
  */
 export type VersionSpec = string;
 
 /** One plugin reference inside `plugins[]` (SPEC §4.2). */
 export interface PackEntry {
-  /** Official identification semantics only: owner/repo, npm package name, or bundle id. */
+  /** Identification per type: npm package name (bundle) / owner/repo (git) / skill directory name (skill). */
   id: string;
   /**
-   * skill | cordis | bundle. Unknown values are preserved (law 2) — the
+   * bundle | git | skill. Unknown values are preserved (law 2) — the
    * union plus string keeps autocomplete while staying open.
    */
   type: PluginType | (string & {});

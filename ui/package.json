@@ -1,7 +1,7 @@
 {
   "name": "@dsh-bundler/ui",
   "version": "0.1.0",
-  "description": "dsh-bundler harness plugin (cordis) — Settings entry with pack & install pages (M2).",
+  "description": "dsh-bundler harness plugin (cordis): pack & install dsh.pack.json via settings + commands.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,9 +19,23 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "pretest": "npm run build --workspace @dsh-bundler/core",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dsh-bundler/core": "0.1.0",
+    "@deepseek-ai/dsh-commands": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-settings": "^0.0.1-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0"
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }

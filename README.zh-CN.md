@@ -36,7 +36,9 @@ Settings 页 → 勾选已装插件 → 选版本策略（默认 `latest`）→ 
   → 报告（逐项：已装 / 跳过 / 失败+原因，可重试）
 ```
 
-参考实现自己**不安装插件**——它只编排 harness 自己的安装命令（`dsh plugin add ...`）。官方 CLI 变了，只有翻译层需要改。
+参考实现自己**不安装插件**——它只编排 harness 自己的安装命令（`dsh plugin --profile <名> add ...`；官方 CLI 要求 `--profile`）。官方 CLI 变了，只有翻译层需要改。
+
+条目类型与官方生态对齐：`bundle`（npm 包）、`git`（`owner/repo`，以 `github:owner/repo` 安装）、`skill`（SKILL.md 文件——走文件通道安装，不是 CLI 命令）。
 
 ## `dsh.pack.json` 示例
 
@@ -48,9 +50,9 @@ Settings 页 → 勾选已装插件 → 选版本策略（默认 `latest`）→ 
   "description": "一键装好翻译全家桶",
   "author": "2BingLing",
   "plugins": [
-    { "id": "owner/repo", "type": "skill", "version": "latest" },
-    { "id": "npm-pkg-name", "type": "cordis", "version": ">=1.2.0" },
-    { "id": "bundle-id", "type": "bundle", "version": "2026-08-15" }
+    { "id": "@dsh/plugin-glossary", "type": "bundle", "version": ">=1.2.0" },
+    { "id": "owner/translation-ui", "type": "git", "version": "#a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0" },
+    { "id": "translation-workflow", "type": "skill", "version": "latest" }
   ],
   "config": {},
   "ext": {}
@@ -66,9 +68,11 @@ core/                       —— 纯 Node、零 DSH 依赖、可独立测试�
   resolve     版本解析（latest / 范围 / 日期锚点 / commit）
   translate   条目 → harness 命令（官方命令变化的唯一隔离点）
   orchestrate 顺序安装 / 幂等跳过 / 重试 / 快照回滚 / 报告
-ui/                         —— harness 插件（cordis），Settings 入口
-  打包页        勾选已装插件 → 导出 dsh.pack.json
-  装包页        粘贴/导入 JSON → 一键装 → 展示报告
+ui/                         —— harness 插件（cordis），settings + 命令入口
+  profile     已装状态真源（$DSH_HOME/profiles/<名>/package.json）
+  pack        已装插件 → dsh.pack.json（latest / current 版本策略）
+  install     dsh.pack.json → 校验 → 编排 → 报告
+  runner      dsh CLI 执行器 + 技能文件通道（SKILL.md → 技能根目录）
 ```
 
 **核心原则**：`core/` 只做"解析、校验、编排"——真正执行安装永远通过 harness 自己的命令，`core/` 不直接操作文件系统装插件。
@@ -87,8 +91,8 @@ ui/                         —— harness 插件（cordis），Settings 入口
 | 里程碑 | 内容 |
 |---|---|
 | M0 | ✅ 仓库骨架：双语 README + SPEC v0.1 |
-| M1 | core：manifest + resolve + translate + orchestrate（vitest 全覆盖） |
-| M2 | ui：Settings 入口 + 打包页 + 装包页 |
+| M1 | ✅ core：manifest + resolve + translate + orchestrate + satisfies（121 测试） |
+| M2 | ✅ ui：cordis 插件——settings + `/dsh-bundler-pack` + `/dsh-bundler-install` 命令、runner、profile 访问、i18n |
 | M3 | （可选，market 侧）`data/packs.json` 收录通道 + Web 展示 |
 | M4 | 种子整合包 ×5：翻译 / 代码审查 / 逆向分析 / 写作 / 自动化 |
 

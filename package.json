@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "npm run build --workspace core && npm run build --workspace ui",
-    "test": "npm run test --workspace core",
+    "test": "npm run test --workspace core && npm run test --workspace ui",
     "typecheck": "tsc -b"
   },
   "devDependencies": {

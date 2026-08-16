@@ -1,20 +1,20 @@
 /**
- * Version resolution (SPEC §4.3).
+ * Version resolution (SPEC §4.3, aligned with the official ecosystem).
  *
  * A pack expresses intent, not contract: versions are resolved at install
  * time. Resolution failures throw — the orchestrator marks the entry
  * `failed` in the report and continues (SPEC §7.2: never abort the pack).
  *
  * Specifier semantics:
- *   latest          → newest available version
- *   semver range    → any version satisfying the range, prefer newest
+ *   latest          → newest available version (default branch for `git`)
+ *   semver range    → any version satisfying the range, prefer newest (`bundle`)
  *   YYYY-MM-DD      → date anchor: newest version published on/before that date
- *   commit SHA      → exact pin, no resolution needed
+ *   #<sha> / <sha>  → commit pin: exact lock, no resolution
  *
- * Data sources per entry type (design doc §8):
- *   skill  → GitHub API (releases first for dates, tags fallback)
- *   cordis → npm registry (versions + time map)
- *   bundle → npm registry (official bundles are npm packages)
+ * Data sources per entry type (design doc §8 / official semantics):
+ *   bundle → npm registry (versions + time map)
+ *   git    → GitHub API (releases first for dates, tags fallback)
+ *   skill  → files, not packages: no network resolution (v0.1)
  *
  * Throttling & caching: sources serialize requests (RateLimiter) and cache
  * listings (TtlCache, 5 min) — see sources/.
@@ -56,7 +56,7 @@ export function classifyVersionSpec(spec: VersionSpec | undefined): VersionSpecK
   const s = (spec ?? "latest").trim();
   if (s === "latest") return "latest";
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return "date";
-  if (/^[0-9a-f]{40}$/i.test(s)) return "commit";
+  if (/^#?[0-9a-f]{40}$/i.test(s)) return "commit";
   return "range";
 }
 
@@ -82,6 +82,12 @@ export async function resolveEntry(entry: PackEntry, ctx: ResolveContext = {}): 
 
   // Commit pins are exact by definition — no resolution, no network.
   if (kind === "commit") {
+    return { entry, status: "ok", resolvedVersion: spec.replace(/^#/, "") };
+  }
+
+  // Skills are files, not packages: v0.1 carries no version lookup for them
+  // (SPEC §4.2 — install semantics are the file channel's concern).
+  if (type === "skill") {
     return { entry, status: "ok", resolvedVersion: spec };
   }
 
@@ -153,18 +159,23 @@ export function parseSemver(version: string): string | null {
 
 // --- default source wiring (module-level singletons: shared limiters/caches) ---
 
-let defaultSources: Record<PluginType, VersionSource> | null = null;
+let defaultSources: Partial<Record<PluginType, VersionSource>> | null = null;
 
 function getSource(type: PluginType, ctx: ResolveContext): VersionSource {
   const injected = ctx.sources?.[type];
   if (injected) return injected;
 
   if (!defaultSources) {
-    const github = new GitHubSource({ token: ctx.githubToken, cacheTtlMs: ctx.cacheTtlMs });
-    const npm = new NpmSource({ registry: ctx.npmRegistry, cacheTtlMs: ctx.cacheTtlMs });
-    defaultSources = { skill: github, cordis: npm, bundle: npm };
+    defaultSources = {
+      bundle: new NpmSource({ registry: ctx.npmRegistry, cacheTtlMs: ctx.cacheTtlMs }),
+      git: new GitHubSource({ token: ctx.githubToken, cacheTtlMs: ctx.cacheTtlMs }),
+    };
   }
-  return defaultSources[type];
+  const source = defaultSources[type];
+  if (!source) {
+    throw new Error(`no version source for entry type "${type}"`);
+  }
+  return source;
 }
 
 /** Reset the default source singletons (tests). */

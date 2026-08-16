@@ -13,7 +13,7 @@ const manifest = (plugins: PackEntry[]): DshPack => ({
   plugins,
 });
 
-const entry = (id: string, type = "skill"): PackEntry => ({ id, type, version: "latest" });
+const entry = (id: string, type = "bundle"): PackEntry => ({ id, type, version: "latest" });
 
 function makeDeps(overrides: Partial<InstallDeps> = {}) {
   const calls = { runs: [] as HarnessCommand[], snapshots: 0, restores: 0 };
@@ -44,7 +44,7 @@ describe("orchestrateInstall", () => {
   it("installs every entry in document order", async () => {
     const { deps, calls } = makeDeps();
     const report = await orchestrateInstall(
-      manifest([entry("a/b"), entry("npm-pkg", "cordis")]),
+      manifest([entry("a/b"), entry("npm-pkg", "bundle")]),
       deps,
     );
     expect(report.summary).toEqual({ installed: 2, skipped: 0, failed: 0 });

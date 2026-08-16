@@ -36,7 +36,9 @@ validate (schemaVersion / kind / entry syntax)
   → report (per entry: installed / skipped / failed + reason, retryable)
 ```
 
-The reference implementation never installs plugins itself — it orchestrates the harness's own install commands (`dsh plugin add ...`). If the official CLI changes, only the translation layer changes.
+The reference implementation never installs plugins itself — it orchestrates the harness's own install commands (`dsh plugin --profile <name> add ...`; `--profile` is required by the official CLI). If the official CLI changes, only the translation layer changes.
+
+Entry types follow the official ecosystem: `bundle` (npm package), `git` (`owner/repo`, installed as `github:owner/repo`), and `skill` (SKILL.md files — installed via a file channel, not a CLI command).
 
 ## Example `dsh.pack.json`
 
@@ -48,9 +50,9 @@ The reference implementation never installs plugins itself — it orchestrates t
   "description": "One-click translation stack",
   "author": "2BingLing",
   "plugins": [
-    { "id": "owner/repo", "type": "skill", "version": "latest" },
-    { "id": "npm-pkg-name", "type": "cordis", "version": ">=1.2.0" },
-    { "id": "bundle-id", "type": "bundle", "version": "2026-08-15" }
+    { "id": "@dsh/plugin-glossary", "type": "bundle", "version": ">=1.2.0" },
+    { "id": "owner/translation-ui", "type": "git", "version": "#a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0" },
+    { "id": "translation-workflow", "type": "skill", "version": "latest" }
   ],
   "config": {},
   "ext": {}
@@ -66,9 +68,11 @@ core/                       — pure Node, zero DSH deps, independently testable
   resolve     version resolution (latest / range / date anchor / commit)
   translate   entries → harness commands (single isolation point for CLI changes)
   orchestrate sequential install / idempotent skip / retry / snapshot rollback / report
-ui/                         — harness plugin (cordis), Settings entry
-  pack page     select installed plugins → export dsh.pack.json
-  install page  paste/import JSON → one-click install → report
+ui/                         — harness plugin (cordis), settings + commands entry
+  profile     installed-state truth source ($DSH_HOME/profiles/<name>/package.json)
+  pack        installed plugins → dsh.pack.json (latest / current version strategy)
+  install     dsh.pack.json → validate → orchestrate → report
+  runner      dsh CLI executor + skill file channel (SKILL.md → skill root)
 ```
 
 **Core principle**: `core/` only parses, validates, and orchestrates. The actual install always goes through the harness's own commands — `core/` never touches the filesystem to install plugins.
@@ -87,8 +91,8 @@ Full text: [SPEC.md](SPEC.md) · [SPEC.zh-CN.md](SPEC.zh-CN.md)
 | Milestone | What |
 |---|---|
 | M0 | ✅ Repository skeleton: bilingual README + SPEC v0.1 |
-| M1 | core: manifest + resolve + translate + orchestrate (vitest coverage) |
-| M2 | ui: Settings entry + pack page + install page |
+| M1 | ✅ core: manifest + resolve + translate + orchestrate + satisfies (121 tests) |
+| M2 | ✅ ui: cordis plugin — settings + `/dsh-bundler-pack` + `/dsh-bundler-install` commands, runner, profile access, i18n |
 | M3 | (optional, market side) `data/packs.json` registry channel + web listing |
 | M4 | Seed packs ×5: translation / code review / reverse analysis / writing / automation |
 

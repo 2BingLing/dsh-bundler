@@ -12,9 +12,9 @@ const validPack = {
   description: "One-click translation stack",
   author: "2BingLing",
   plugins: [
-    { id: "owner/translation-skill", type: "skill", version: "latest" },
-    { id: "@dsh/plugin-glossary", type: "cordis", version: ">=1.2.0" },
-    { id: "dsh-plugin-tm", type: "bundle", version: "2026-08-15" },
+    { id: "@dsh/plugin-glossary", type: "bundle", version: ">=1.2.0" },
+    { id: "owner/translation-ui", type: "git", version: "#a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0" },
+    { id: "translation-workflow", type: "skill", version: "latest" },
   ],
   config: {},
   ext: {},

@@ -14,9 +14,11 @@ DeepSeek Harness（DSH）生态已有 1500+ 插件，但用户缺的从来不是
 
 | 术语 | 含义 |
 |---|---|
-| **bundle** | DSH 官方单插件包格式：每个可安装插件声明一个 `dsh.bundle` manifest，通过 `dsh plugin add <包名>` 安装。 |
-| **pack** | 本协议：一组插件（每个插件本身是 bundle 或 skill）加版本锁定，由一份 `dsh.pack.json` 描述。*pack 正是官方生态没有提供的那一层。* |
-| **条目（entry）** | `plugins[]` 中的一条插件引用。 |
+| **bundle** | 携带 DSH 插件层的 npm 包：`package.json` 声明 `dsh.bundle.patch`，指向一份 `cordis.patch.yml`。通过 `dsh plugin --profile <名> add <包>` 装入 profile。 |
+| **profile** | 可运行的 DSH 组合目录（`$DSH_HOME/profiles/<名>/`）：`package.json` 携带 `dsh.profile.bundles`（有序 bundle 层列表）与 pnpm 管理的 `dependencies`。 |
+| **skill** | Agent 技能：`<名>/SKILL.md`（或 `<名>.md`）文件，由 harness 从技能根目录（`$DSH_HOME/skills/`、`.dsh/skills/` 等）扫描发现。技能是文件，不是 npm 包。 |
+| **pack** | 本协议：一组条目（bundle、git 安装的 bundle 和/或 skill）加版本锁定，由一份 `dsh.pack.json` 描述。*pack 正是官方生态没有提供的那一层。* |
+| **条目（entry）** | `plugins[]` 中的一条插件/技能引用。 |
 | **消费者（consumer）** | 任何读取 `dsh.pack.json` 的工具（含参考实现）。 |
 | **生产者（producer）** | 任何写出 `dsh.pack.json` 的工具（含参考实现）。 |
 
@@ -49,17 +51,17 @@ DeepSeek Harness（DSH）生态已有 1500+ 插件，但用户缺的从来不是
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `id` | 字符串 | **是** | 仅限官方识别语义——见下表。 |
-| `type` | 字符串 | **是** | `skill` \| `cordis` \| `bundle`。未知类型被保留、警告、跳过并报告（铁律 2）。 |
+| `id` | 字符串 | **是** | 按 `type` 的识别语义——见下表。 |
+| `type` | 字符串 | **是** | `bundle` \| `git` \| `skill`。未知类型被保留、警告、跳过并报告（铁律 2）。 |
 | `version` | 字符串 | 否 | 版本说明符，默认 `latest`；见 §4.3。 |
 
 按类型的 `id` 语义：
 
-| `type` | `id` 形式 | 示例 |
-|---|---|---|
-| `skill` | `owner/repo` 形式的仓库（从根目录含 `SKILL.md` 的仓库安装） | `owner/awesome-skill` |
-| `cordis` | npm 包名（cordis 标记，通过 `dsh plugin add` 安装） | `@dsh/plugin-xyz` |
-| `bundle` | 官方 bundle id | `dsh-plugin-xyz` |
+| `type` | `id` 形式 | 安装语义 | 示例 |
+|---|---|---|---|
+| `bundle` | npm 包名 | `dsh plugin --profile <p> add <id>` | `@dsh/plugin-xyz` |
+| `git` | `owner/repo` 形式的仓库 | `dsh plugin --profile <p> add github:<id>` | `owner/awesome-plugin` |
+| `skill` | 技能目录名 | 文件通道：把 `<id>/SKILL.md` 落盘到技能根目录（不是 CLI 命令） | `translation-workflow` |
 
 ### 4.3 版本说明符
 
@@ -67,10 +69,10 @@ DeepSeek Harness（DSH）生态已有 1500+ 插件，但用户缺的从来不是
 
 | 说明符 | 形式 | 解析语义 |
 |---|---|---|
-| `latest`（默认） | `latest` | 安装时刻的最新可用版本。 |
-| semver 范围 | `>=1.2.0`、`^1.2.0`、`~1.2`、`1.x` | 满足范围的任意版本；优先最新。 |
-| 日期锚点 | `YYYY-MM-DD` | 该日期当天或之前发布的最新版本。 |
-| commit 锁定 | 40 位十六进制 SHA | 精确版本；不做解析。可选精确锁。 |
+| `latest`（默认） | `latest` | 安装时刻的最新可用版本（`git` 为默认分支）。 |
+| semver 范围 | `>=1.2.0`、`^1.2.0`、`~1.2`、`1.x` | 满足范围的任意版本；优先最新（仅 `bundle`）。 |
+| 日期锚点 | `YYYY-MM-DD` | 该日期当天或之前发布的最新版本；安装时解析为具体版本。 |
+| commit 锁定 | `git` 用 `#<40 位十六进制>`；`bundle` 用精确版本（`1.2.3`） | 精确锁定；不做解析。 |
 
 消费者**不得**因某个版本解析失败而放弃整个包；见 §5.4 / §7。
 
@@ -109,7 +111,7 @@ DeepSeek Harness（DSH）生态已有 1500+ 插件，但用户缺的从来不是
 
 1. **校验**——按 §4 校验 `schemaVersion`、`kind` 与条目语法。只有以下情况算硬错误：JSON 非法、`kind` 错误、`schemaVersion` 不支持、必填字段缺失、条目结构损坏。其余一律是警告。
 2. **解析**——按 §4.3。解析失败把该条目标记为报告中的 `failed`；绝不中止整包。
-3. **翻译**——条目 → 官方 harness 命令（`dsh plugin add ...`；支持 `--profile`）。这是唯一认识命令的层。
+3. **翻译**——条目 → 官方 harness 命令（`dsh plugin --profile <p> add ...`；官方 CLI 要求 `--profile`）。`skill` 条目翻译为文件通道指令而非 shell 命令。这是唯一认识命令的层。
 4. **执行**——按文档顺序顺序执行。**幂等**：已安装且满足版本说明符的条目被跳过（报告为 `skipped`）。
 5. **报告**——逐条目：`installed` / `skipped` / `failed` + 原因。失败条目可重试。最后给汇总。
 
@@ -155,9 +157,9 @@ DeepSeek Harness（DSH）生态已有 1500+ 插件，但用户缺的从来不是
   "description": "一键装好翻译全家桶",
   "author": "2BingLing",
   "plugins": [
-    { "id": "owner/translation-skill", "type": "skill", "version": "latest" },
-    { "id": "@dsh/plugin-glossary", "type": "cordis", "version": ">=1.2.0" },
-    { "id": "dsh-plugin-tm", "type": "bundle", "version": "2026-08-15" }
+    { "id": "@dsh/plugin-glossary", "type": "bundle", "version": ">=1.2.0" },
+    { "id": "owner/translation-ui", "type": "git", "version": "#a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0" },
+    { "id": "translation-workflow", "type": "skill", "version": "latest" }
   ],
   "config": {},
   "ext": { "example-namespace": { "note": "消费者会忽略它" } }

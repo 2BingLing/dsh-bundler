@@ -20,4 +20,5 @@ export { DEFAULT_TEMPLATES, translateEntry } from "./translate.js";
 export type { HarnessCommand, TranslateContext } from "./translate.js";
 export { orchestrateInstall, retryFailed } from "./orchestrate.js";
 export type { InstallDeps, InstallOutcome, InstallReport } from "./orchestrate.js";
+export { satisfiesInstalled } from "./satisfies.js";
 export * from "./sources/index.js";

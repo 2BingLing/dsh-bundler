@@ -14,9 +14,11 @@ This repository also contains a reference implementation (a harness plugin) that
 
 | Term | Meaning |
 |---|---|
-| **bundle** | The official DSH single-plugin package format: each installable plugin declares a `dsh.bundle` manifest, installed via `dsh plugin add <package>`. |
-| **pack** | This protocol: a set of plugins (each itself a bundle or skill) plus version locking, described by one `dsh.pack.json`. *A pack is the layer the official ecosystem does not provide.* |
-| **entry** | One plugin reference inside `plugins[]`. |
+| **bundle** | An npm package that ships a DSH plugin layer: its `package.json` declares `dsh.bundle.patch`, pointing at a `cordis.patch.yml`. Installed into a profile via `dsh plugin --profile <name> add <package>`. |
+| **profile** | A runnable DSH composition directory (`$DSH_HOME/profiles/<name>/`): its `package.json` carries `dsh.profile.bundles` — the ordered list of bundle layers — and pnpm-managed `dependencies`. |
+| **skill** | An agent skill: a `<name>/SKILL.md` (or `<name>.md`) file discovered by the harness from skill roots (`$DSH_HOME/skills/`, `.dsh/skills/`, ...). Skills are files, not npm packages. |
+| **pack** | This protocol: a set of entries (bundles, git-installed bundles, and/or skills) plus version locking, described by one `dsh.pack.json`. *A pack is the layer the official ecosystem does not provide.* |
+| **entry** | One plugin/skill reference inside `plugins[]`. |
 | **consumer** | Any tool that reads a `dsh.pack.json` (the reference implementation included). |
 | **producer** | Any tool that writes a `dsh.pack.json` (the reference implementation included). |
 
@@ -49,17 +51,17 @@ Each entry:
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | string | **yes** | Official identification semantics only — see the table below. |
-| `type` | string | **yes** | `skill` \| `cordis` \| `bundle`. Unknown types are preserved, warned, skipped, and reported (Law 2). |
+| `id` | string | **yes** | Identification per `type` — see the table below. |
+| `type` | string | **yes** | `bundle` \| `git` \| `skill`. Unknown types are preserved, warned, skipped, and reported (Law 2). |
 | `version` | string | no | Version specifier, defaults to `latest`; see §4.3. |
 
 `id` semantics by type:
 
-| `type` | `id` form | Example |
-|---|---|---|
-| `skill` | repository in `owner/repo` form (installed from a repo whose root contains `SKILL.md`) | `owner/awesome-skill` |
-| `cordis` | npm package name (cordis-marked, installed via `dsh plugin add`) | `@dsh/plugin-xyz` |
-| `bundle` | official bundle id | `dsh-plugin-xyz` |
+| `type` | `id` form | Install semantics | Example |
+|---|---|---|---|
+| `bundle` | npm package name | `dsh plugin --profile <p> add <id>` | `@dsh/plugin-xyz` |
+| `git` | repository in `owner/repo` form | `dsh plugin --profile <p> add github:<id>` | `owner/awesome-plugin` |
+| `skill` | skill directory name | file channel: materialize `<id>/SKILL.md` into a skill root (not a CLI command) | `translation-workflow` |
 
 ### 4.3 Version specifiers
 
@@ -67,10 +69,10 @@ A pack expresses **intent, not contract**: versions are resolved at install time
 
 | Specifier | Form | Resolution semantics |
 |---|---|---|
-| `latest` (default) | `latest` | Newest available version at install time. |
-| Semver range | `>=1.2.0`, `^1.2.0`, `~1.2`, `1.x` | Any version satisfying the range; prefer the newest. |
-| Date anchor | `YYYY-MM-DD` | Newest version published on or before that date. |
-| Commit pin | 40-char hex SHA | Exact version; no resolution. Optional exact lock. |
+| `latest` (default) | `latest` | Newest available version at install time (default branch for `git`). |
+| Semver range | `>=1.2.0`, `^1.2.0`, `~1.2`, `1.x` | Any version satisfying the range; prefer the newest (`bundle` only). |
+| Date anchor | `YYYY-MM-DD` | Newest version published on or before that date; resolved to a concrete version at install time. |
+| Commit pin | `#<40-hex>` for `git`; exact version (`1.2.3`) for `bundle` | Exact lock; no resolution. |
 
 Consumers MUST NOT fail a pack because a version cannot be resolved; see §5.4 / §7.
 
@@ -109,7 +111,7 @@ The reference implementation (this repository) MUST:
 
 1. **Validate** — `schemaVersion`, `kind`, and entry syntax per §4. Hard errors only for: invalid JSON, wrong `kind`, unsupported `schemaVersion`, missing required fields, malformed entries. Everything else is a warning.
 2. **Resolve** — per §4.3. A resolution failure marks the entry `failed` in the report; it never aborts the pack.
-3. **Translate** — entries to official harness commands (`dsh plugin add ...`; `--profile` supported). This is the only layer that knows commands.
+3. **Translate** — entries to official harness commands (`dsh plugin --profile <p> add ...`; the official CLI requires `--profile`). `skill` entries translate to a file-channel instruction instead of a shell command. This is the only layer that knows commands.
 4. **Execute** — sequentially, in document order. **Idempotent**: an entry already installed and satisfying its version spec is skipped (reported as `skipped`).
 5. **Report** — per entry: `installed` / `skipped` / `failed` + reason. Failed entries are retryable. Summary at the end.
 
@@ -155,9 +157,9 @@ validate → resolve → translate → execute (idempotent) → report
   "description": "One-click translation stack",
   "author": "2BingLing",
   "plugins": [
-    { "id": "owner/translation-skill", "type": "skill", "version": "latest" },
-    { "id": "@dsh/plugin-glossary", "type": "cordis", "version": ">=1.2.0" },
-    { "id": "dsh-plugin-tm", "type": "bundle", "version": "2026-08-15" }
+    { "id": "@dsh/plugin-glossary", "type": "bundle", "version": ">=1.2.0" },
+    { "id": "owner/translation-ui", "type": "git", "version": "#a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0" },
+    { "id": "translation-workflow", "type": "skill", "version": "latest" }
   ],
   "config": {},
   "ext": { "example-namespace": { "note": "ignored by consumers" } }
