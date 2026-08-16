@@ -28,6 +28,7 @@ import { listInstalled, readProfileManifest, type ProfileManifest } from "./prof
 import { buildPack, serializePack } from "./pack.js";
 import { installPack } from "./install.js";
 import { detectLocale, messages } from "./i18n.js";
+import { DSH_BUNDLER_SETTINGS_NAMESPACE, type BundlerConfig } from "./settings.js";
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = "dsh-bundler";
@@ -36,11 +37,7 @@ export const name = "dsh-bundler";
 export const inject = ["commands", "settings"] as const;
 
 /** Plugin configuration (schema-editable fields carry defaults). */
-export interface Config {
-  /** Target profile for pack/install. */
-  profile: string;
-  /** dsh binary. */
-  dshBin: string;
+export interface Config extends BundlerConfig {
   /** Harness home override; defaults to $DSH_HOME / ~/.dsh. */
   dshHome?: string;
   /** UI language; defaults to the harness locale. */
@@ -53,18 +50,21 @@ export const Config: z<Config> = z.object({
   dshBin: z.string().default("dsh"),
 });
 
-/** Settings namespace carrying this plugin's configuration. */
-export const DSH_BUNDLER_SETTINGS_NAMESPACE = settingsNamespace("dsh-bundler");
-
 /** Register settings, commands, and the core wiring. */
 export function apply(ctx: Context, config: Config): void {
   let current: () => Config = () => config;
-  installSettingsSection(ctx, DSH_BUNDLER_SETTINGS_NAMESPACE, Config, config, {
-    setSource: (source) => {
-      current = source;
+  installSettingsSection(
+    ctx,
+    settingsNamespace(DSH_BUNDLER_SETTINGS_NAMESPACE),
+    Config,
+    config,
+    {
+      setSource: (source) => {
+        current = source;
+      },
+      onChange: () => {},
     },
-    onChange: () => {},
-  });
+  );
 
   const msg = messages(config.locale ?? detectLocale());
   const runner = createHarnessRunner({ dshBin: config.dshBin, dshHome: config.dshHome });
