@@ -86,16 +86,6 @@ ui/                         — harness plugin (cordis), settings + commands ent
 
 Full text: [SPEC.md](SPEC.md) · [SPEC.zh-CN.md](SPEC.zh-CN.md)
 
-## Roadmap
-
-| Milestone | What |
-|---|---|
-| M0 | ✅ Repository skeleton: bilingual README + SPEC v0.1 |
-| M1 | ✅ core: manifest + resolve + translate + orchestrate + satisfies (121 tests) |
-| M2 | ✅ ui: cordis plugin — settings + `/dsh-bundler-pack` + `/dsh-bundler-install` commands, runner, profile access, i18n |
-| M3 | (optional, market side) `data/packs.json` registry channel + web listing |
-| M4 | Seed packs ×5: translation / code review / reverse analysis / writing / automation |
-
 ## Bilingual policy
 
 This project targets Chinese and English users from day one:

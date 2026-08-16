@@ -86,16 +86,6 @@ ui/                         —— harness 插件（cordis），settings + 命�
 
 全文：[SPEC.zh-CN.md](SPEC.zh-CN.md) · [SPEC.md](SPEC.md)
 
-## 路线图
-
-| 里程碑 | 内容 |
-|---|---|
-| M0 | ✅ 仓库骨架：双语 README + SPEC v0.1 |
-| M1 | ✅ core：manifest + resolve + translate + orchestrate + satisfies（121 测试） |
-| M2 | ✅ ui：cordis 插件——settings + `/dsh-bundler-pack` + `/dsh-bundler-install` 命令、runner、profile 访问、i18n |
-| M3 | （可选，market 侧）`data/packs.json` 收录通道 + Web 展示 |
-| M4 | 种子整合包 ×5：翻译 / 代码审查 / 逆向分析 / 写作 / 自动化 |
-
 ## 双语政策
 
 本项目从第一天起同时面向中文与英文用户：

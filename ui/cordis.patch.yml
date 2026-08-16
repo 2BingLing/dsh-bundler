@@ -1,0 +1,6 @@
+# dsh-bundler plugin layer — inserted when the bundle joins a profile.
+# Row references the package by name; the Loader resolves it from the
+# profile's dependencies (official bundle pattern, publish.md).
+- insert:
+    - id: dsh-bundler
+      name: '@dsh-bundler/ui'
