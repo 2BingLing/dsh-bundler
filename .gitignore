@@ -1,0 +1,37 @@
+# ------------------------------------------------------------------
+# dsh-bundler — repository ignore rules
+# ------------------------------------------------------------------
+
+# Private design documents — NEVER publish.
+# Design docs live in doc/ and are intentionally kept out of the
+# public repository (设计文档不公开).
+doc/
+
+# Dependencies
+node_modules/
+.npm-cache/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Tests / coverage
+coverage/
+coverage.*/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+.npmrc
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

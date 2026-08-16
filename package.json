@@ -1,0 +1,30 @@
+{
+  "name": "dsh-bundler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DSH pack protocol (dsh.pack.json) + reference implementation — one file, one ready-to-use agent environment.",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "pack",
+    "bundle",
+    "protocol"
+  ],
+  "license": "MIT",
+  "workspaces": [
+    "core",
+    "ui"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "npm run build --workspace core && npm run build --workspace ui",
+    "test": "npm run test --workspace core",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
